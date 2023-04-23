@@ -1,0 +1,4 @@
+python-dotenv~=1.0.0
+python-telegram-bot[job-queue]~=20.2
+FlightRadarAPI~=1.2.7
+mysql-connector-python~=8.0.33
