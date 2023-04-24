@@ -53,6 +53,41 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 
+async def radius_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id: int = update.effective_user.id
+
+    entry = db.select_user(user_id)
+    if entry is None:
+        await update.message.reply_text(
+            'You are not receiving notifications!\n'
+            'Send me your location to start receiving notifications...'
+        )
+        return
+
+    user: User = from_dict(data_class=User, data=entry)
+
+    if len(context.args) == 0:
+        await update.message.reply_text(
+            f'Your current radius is {user.radius}m.\n'
+            'Send /radius <radius> to change it.'
+        )
+        return
+
+    try:
+        radius: int = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text('Radius must be an integer.')
+        return
+
+    if radius <= 0:
+        await update.message.reply_text('Radius must be greater than 0m.')
+        return
+
+    user.radius = radius
+    db.update_user(user)
+    await update.message.reply_text(f'Your radius has been set to {user.radius}m.')
+
+
 # Messages
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -87,6 +122,7 @@ if __name__ == '__main__':
     # Command handlers
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('stop', stop_command))
+    app.add_handler(CommandHandler('radius', radius_command))
 
     # Start the application
     app.run_polling()
