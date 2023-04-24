@@ -62,6 +62,26 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 
+async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id: int = update.effective_user.id
+
+    entry = db.select_user(user_id)
+    if entry is None:
+        await no_notifications_message(update)
+        return
+
+    user: User = from_dict(data_class=User, data=entry)
+
+    msg: str = (
+        'You are receiving notifications for flights in your area.\n'
+        '\n'
+        f'Radius: {user.radius}m\n'
+        f'Altitude Range: {user.min_altitude}m - {user.max_altitude}m'
+    )
+
+    await update.message.reply_text(msg)
+
+
 async def radius_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id: int = update.effective_user.id
 
@@ -267,6 +287,7 @@ if __name__ == '__main__':
     # Command handlers
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('stop', stop_command))
+    app.add_handler(CommandHandler('info', info_command))
     app.add_handler(CommandHandler('radius', radius_command))
     app.add_handler(CommandHandler('altitude', altitude_command))
     app.add_handler(CommandHandler('altmin', min_altitude_command))
