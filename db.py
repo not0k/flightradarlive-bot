@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from mysql.connector import MySQLConnection, CMySQLConnection
 from mysql.connector.pooling import PooledMySQLConnection
 
+from user import User
+
 load_dotenv()
 
 logging.basicConfig(
@@ -47,6 +49,31 @@ def get_database() -> PooledMySQLConnection | MySQLConnection | CMySQLConnection
 
 # Insert
 
+def insert_user(user: User) -> bool:
+    db = get_database()
+    if db is None:
+        return False
+
+    insert_user_query = """
+        INSERT INTO users
+        (id, latitude, longitude, radius, min_altitude, max_altitude)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+    values = (
+        user.id,
+        user.latitude,
+        user.longitude,
+        user.radius,
+        user.min_altitude,
+        user.max_altitude
+    )
+
+    with db.cursor() as cursor:
+        cursor.execute(insert_user_query, values)
+        db.commit()
+        db.close()
+        return True
+
 
 # Select
 
@@ -71,6 +98,31 @@ def select_user(user_id: int) -> Mapping[str, Any] | None:
 
 
 # Update
+
+def update_user(user: User) -> bool:
+    db = get_database()
+    if db is None:
+        return False
+
+    update_user_query = """
+        UPDATE users
+        SET latitude=%s, longitude=%s, radius=%s, min_altitude=%s, max_altitude=%s
+        WHERE id=%s
+    """
+    values = (
+        user.latitude,
+        user.longitude,
+        user.radius,
+        user.min_altitude,
+        user.max_altitude,
+        user.id
+    )
+
+    with db.cursor() as cursor:
+        cursor.execute(update_user_query, values)
+        db.commit()
+        db.close()
+        return True
 
 
 # Delete

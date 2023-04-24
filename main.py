@@ -2,11 +2,13 @@ import os
 import logging
 from typing import Final
 
+from dacite import from_dict
 from dotenv import load_dotenv
 from telegram import Update, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 
 import db
+from user import User
 
 load_dotenv()
 
@@ -51,12 +53,40 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 
+# Messages
+
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message: Message = update.message or update.edited_message
+
+    user_id: int = update.effective_user.id
+    entry = db.select_user(user_id)
+    if entry is None:
+        new_user = User(id=user_id, latitude=message.location.latitude, longitude=message.location.longitude)
+        db.insert_user(new_user)
+        await message.reply_text('You are now receiving notifications!')
+        return
+
+    user: User = from_dict(data_class=User, data=entry)
+
+    user.latitude = message.location.latitude
+    user.longitude = message.location.longitude
+
+    db.update_user(user)
+
+    if not update.edited_message:
+        await update.message.reply_text('Your location has been updated!')
+
+
 if __name__ == '__main__':
     # Create the application
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
+    # Message handlers
+    app.add_handler(MessageHandler(filters.LOCATION, handle_location))
+
     # Command handlers
     app.add_handler(CommandHandler('start', start_command))
+    app.add_handler(CommandHandler('stop', stop_command))
 
     # Start the application
     app.run_polling()
