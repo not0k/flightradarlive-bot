@@ -19,6 +19,15 @@ logging.basicConfig(
 TELEGRAM_TOKEN: Final = os.getenv('TELEGRAM_TOKEN')
 
 
+# Helper functions
+
+async def no_notifications_message(update: Update) -> None:
+    await update.message.reply_text(
+        'You are not receiving notifications!\n'
+        'Send me your location to start receiving notifications...'
+    )
+
+
 # Commands
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -58,10 +67,7 @@ async def radius_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     entry = db.select_user(user_id)
     if entry is None:
-        await update.message.reply_text(
-            'You are not receiving notifications!\n'
-            'Send me your location to start receiving notifications...'
-        )
+        await no_notifications_message(update)
         return
 
     user: User = from_dict(data_class=User, data=entry)
@@ -93,10 +99,7 @@ async def altitude_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     entry = db.select_user(user_id)
     if entry is None:
-        await update.message.reply_text(
-            'You are not receiving notifications!\n'
-            'Send me your location to start receiving notifications...'
-        )
+        await no_notifications_message(update)
         return
 
     user: User = from_dict(data_class=User, data=entry)
@@ -157,6 +160,44 @@ async def altitude_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     )
 
 
+async def min_altitude_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id: int = update.effective_user.id
+
+    entry = db.select_user(user_id)
+    if entry is None:
+        await no_notifications_message(update)
+        return
+
+    user: User = from_dict(data_class=User, data=entry)
+
+    if len(context.args) == 0:
+        await update.message.reply_text(
+            f'Your current min altitude is {user.min_altitude}m.\n'
+            'Send /altmin <altitude> to change it.'
+        )
+        return
+
+    try:
+        min_altitude: int = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text('Min altitude must be an integer.')
+        return
+
+    if min_altitude < 0 or min_altitude > 100000:
+        await update.message.reply_text('Min altitude must be between 0 and 100000m.')
+        return
+    if min_altitude > user.max_altitude:
+        await update.message.reply_text(
+            'Min altitude must be less than max altitude!'
+            f'Your current max altitude is {user.max_altitude}m.'
+        )
+        return
+
+    user.min_altitude = min_altitude
+    db.update_user(user)
+    await update.message.reply_text(f'Your min altitude has been set to {user.min_altitude}m.')
+
+
 # Messages
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -192,6 +233,8 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('stop', stop_command))
     app.add_handler(CommandHandler('radius', radius_command))
+    app.add_handler(CommandHandler('altitude', altitude_command))
+    app.add_handler(CommandHandler('altmin', min_altitude_command))
 
     # Start the application
     app.run_polling()
