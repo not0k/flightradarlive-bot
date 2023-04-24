@@ -1,0 +1,7 @@
+start - Start the bot
+stop - Stop receiving notifications
+info - Show current settings
+radius - Set radius for flight detection
+altitude - Set altitude range for flight detection
+altmin - Set min altitude for flight detection
+altmax - Set max altitude for flight detection
