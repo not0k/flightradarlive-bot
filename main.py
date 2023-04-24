@@ -88,12 +88,81 @@ async def radius_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(f'Your radius has been set to {user.radius}m.')
 
 
+async def altitude_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id: int = update.effective_user.id
+
+    entry = db.select_user(user_id)
+    if entry is None:
+        await update.message.reply_text(
+            'You are not receiving notifications!\n'
+            'Send me your location to start receiving notifications...'
+        )
+        return
+
+    user: User = from_dict(data_class=User, data=entry)
+
+    if len(context.args) == 1:
+        try:
+            altitude: int = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text('Altitude must be an integer.')
+            return
+
+        if altitude < 0 or altitude > 100000:
+            await update.message.reply_text('Altitude must be between 0 and 100000m.')
+            return
+
+        user.min_altitude = altitude
+        user.max_altitude = altitude
+
+    if len(context.args) == 2:
+        try:
+            min_altitude: int = int(context.args[0])
+        except ValueError:
+            await update.message.reply_text('Min altitude must be an integer.')
+            return
+
+        try:
+            max_altitude: int = int(context.args[1])
+        except ValueError:
+            await update.message.reply_text('Max altitude must be an integer.')
+            return
+
+        if min_altitude > max_altitude:
+            await update.message.reply_text('Min altitude must be less than max altitude.')
+            return
+        if min_altitude < 0 or min_altitude > 100000:
+            await update.message.reply_text('Min altitude must be between 0 and 100000m.')
+            return
+        if max_altitude < 0 or max_altitude > 100000:
+            await update.message.reply_text('Max altitude must be between 0 and 100000m.')
+            return
+
+        user.min_altitude = min_altitude
+        user.max_altitude = max_altitude
+
+    db.update_user(user)
+
+    await update.message.reply_text(
+        'Your current altitude range is:\n'
+        '\n'
+        f'Min: {user.min_altitude}m\n'
+        f'Max: {user.max_altitude}m\n'
+        '\n'
+        'You can change it with:\n'
+        '/altitude <altitude>\n'
+        '/altitude <min-altitude> <max-atlitude>\n'
+        '/altmin <min-altitude>\n'
+        '/altmax <max-altitude>'
+    )
+
+
 # Messages
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message: Message = update.message or update.edited_message
-
     user_id: int = update.effective_user.id
+
     entry = db.select_user(user_id)
     if entry is None:
         new_user = User(id=user_id, latitude=message.location.latitude, longitude=message.location.longitude)
