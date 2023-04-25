@@ -75,6 +75,29 @@ def insert_user(user: User) -> bool:
         return True
 
 
+def insert_flight(user_id: int, flight_id: str) -> bool:
+    db = get_database()
+    if db is None:
+        return False
+
+    insert_flight_query = """
+        INSERT INTO user_flights
+        (user_id, flight_id, timestamp)
+        VALUES (%s, %s, %s)
+    """
+    values = (
+        user_id,
+        flight_id,
+        time.time()
+    )
+
+    with db.cursor() as cursor:
+        cursor.execute(insert_flight_query, values)
+        db.commit()
+        db.close()
+        return True
+
+
 # Select
 
 def select_user(user_id: int) -> Mapping[str, Any] | None:
@@ -95,6 +118,43 @@ def select_user(user_id: int) -> Mapping[str, Any] | None:
         entry = cursor.fetchone()
         db.close()
         return entry
+
+
+def select_users() -> Sequence[Any] | None:
+    db = get_database()
+    if db is None:
+        return None
+
+    select_users_query = """
+        SELECT * FROM users
+    """
+
+    with db.cursor(buffered=True, dictionary=True) as cursor:
+        cursor.execute(select_users_query)
+        users = cursor.fetchall()
+        db.close()
+        return users
+
+
+def select_flight(user_id: int, flight_id: str) -> Mapping[str, Any] | None:
+    db = get_database()
+    if db is None:
+        return None
+
+    select_flight_query = """
+        SELECT * FROM user_flights
+        WHERE user_id=%s AND flight_id=%s
+    """
+    values = (
+        user_id,
+        flight_id
+    )
+
+    with db.cursor(buffered=True, dictionary=True) as cursor:
+        cursor.execute(select_flight_query, values)
+        flight = cursor.fetchone()
+        db.close()
+        return flight
 
 
 # Update

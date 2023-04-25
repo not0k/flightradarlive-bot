@@ -1,9 +1,14 @@
 import os
 import logging
+import threading
+import time
+from math import cos, radians
 from typing import Final
 
+import FlightRadar24.flight
 from dacite import from_dict
 from dotenv import load_dotenv
+from FlightRadar24.api import FlightRadar24API
 from telegram import Update, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 
@@ -18,14 +23,114 @@ logging.basicConfig(
 
 TELEGRAM_TOKEN: Final = os.getenv('TELEGRAM_TOKEN')
 
+fr_api: Final = FlightRadar24API()
+
 
 # Helper functions
+
+def get_bounding_box(latitude: float, longitude: float, radius: int) -> dict[str, float]:
+    diameter_km: int = radius // 1000  # meters to kilometers
+
+    return {
+        'tl_y': latitude + (diameter_km / 111.32),
+        'br_y': latitude - (diameter_km / 111.32),
+        'tl_x': longitude - (diameter_km / (111.32 * cos(radians(latitude)))),
+        'br_x': longitude + (diameter_km / (111.32 * cos(radians(latitude)))),
+    }
+
+
+def get_img_src(aircraft_images) -> str | None:
+    if isinstance(aircraft_images, dict):
+        large_images = aircraft_images.get('large', None)
+        if isinstance(large_images, list) and len(large_images) > 0:
+            image_src = large_images[0].get('src', None)
+            return image_src
+    return None
+
+
+def create_message(flight: FlightRadar24.flight.Flight) -> str:
+    altitude_m: int = int(flight.altitude * 0.3048)  # feet to meters
+    speed_kmh: int = int(flight.ground_speed * 1.852)  # knots to km/h
+
+    origin_airport: str = flight.origin_airport_iata
+    origin_country: str = flight.origin_airport_country_name
+    destination_airport: str = flight.destination_airport_iata
+    destination_country: str = flight.destination_airport_country_name
+
+    origin: str = f'{origin_airport} - {origin_country}' if origin_country != "N/A" else origin_airport
+    destination: str = f'{destination_airport} - {destination_country}' if destination_country != "N/A" else destination_airport
+
+    plane_emoji: str = '\N{AIRPLANE}'
+
+    return (
+        f'{plane_emoji} New flight in your area {plane_emoji}\n\n'
+        f'Aircraft: {flight.registration} ({flight.aircraft_code})\n'
+        f'Callsign: {flight.callsign}\n'
+        f'Altitude: {altitude_m}m\n'
+        f'Speed: {speed_kmh}km/h\n'
+        f'From: {origin}\n'
+        f'To: {destination}'
+    )
+
 
 async def no_notifications_message(update: Update) -> None:
     await update.message.reply_text(
         'You are not receiving notifications!\n'
         'Send me your location to start receiving notifications...'
     )
+
+
+# Schedules
+
+def check_flights() -> None:
+    while True:
+        for user_entry in db.select_users():
+            if user_entry is None:
+                continue
+
+            user: User = from_dict(data_class=User, data=user_entry)
+
+            bounding_box = get_bounding_box(user.latitude, user.longitude, user.radius)
+            bounds = fr_api.get_bounds(bounding_box)
+            flights = fr_api.get_flights(bounds=bounds)
+
+            for flight in flights:
+                if db.select_flight(user.id, flight.id) is not None:
+                    continue
+
+                if flight.altitude < user.min_altitude or flight.altitude > user.max_altitude:
+                    continue
+
+                db.insert_flight(user.id, flight.id)
+
+                app.job_queue.run_once(send_notification, 0, user_id=user.id, data=flight)
+
+        time.sleep(5)
+
+
+async def send_notification(context: CallbackContext) -> None:
+    user_id: int = context.job.user_id
+    flight: FlightRadar24.flight.Flight = context.job.data
+
+    details: dict = fr_api.get_flight_details(flight.id)
+    flight.set_flight_details(details)
+
+    image_src: str = get_img_src(flight.aircraft_images)
+
+    msg: str = create_message(flight)
+
+    tracking_url: str = f'https://www.flightradar24.com/{flight.callsign}/{flight.id}'
+
+    reply_markup = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton('\N{ROUND PUSHPIN} View on Map', url=tracking_url)
+        ]
+    ]) if flight.callsign != "N/A" else None
+
+    if image_src:
+        await context.bot.send_photo(user_id, image_src, msg, reply_markup=reply_markup)
+    else:
+        await context.bot.send_message(user_id, msg, reply_markup=reply_markup)
 
 
 # Commands
@@ -278,7 +383,11 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 if __name__ == '__main__':
-    # Create the application
+    # Starts the thread that checks for flights
+    thread1 = threading.Thread(target=check_flights)
+    thread1.start()
+
+    # Creates the application
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     # Message handlers
@@ -293,5 +402,5 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler('altmin', min_altitude_command))
     app.add_handler(CommandHandler('altmax', max_altitude_command))
 
-    # Start the application
+    # Starts the application
     app.run_polling()
