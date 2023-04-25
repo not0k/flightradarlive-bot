@@ -395,6 +395,10 @@ if __name__ == '__main__':
     thread1 = threading.Thread(target=check_flights)
     thread1.start()
 
+    # Starts the thread that deletes old flights
+    thread2 = threading.Thread(target=delete_old_flights)
+    thread2.start()
+
     # Creates the application
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
