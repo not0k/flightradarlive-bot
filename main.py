@@ -133,6 +133,14 @@ async def send_notification(context: CallbackContext) -> None:
         await context.bot.send_message(user_id, msg, reply_markup=reply_markup)
 
 
+def delete_old_flights() -> None:
+    flight_delete_interval: Final = 300  # 5 minutes
+
+    while True:
+        db.delete_old_flights(flight_delete_interval)
+        time.sleep(flight_delete_interval)
+
+
 # Commands
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

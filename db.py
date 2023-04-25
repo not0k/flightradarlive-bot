@@ -205,3 +205,23 @@ def delete_user(user_id: int) -> bool:
         db.commit()
         db.close()
         return True
+
+
+def delete_old_flights(delete_interval: float) -> bool:
+    db = get_database()
+    if db is None:
+        return False
+
+    delete_old_flights_query = """
+        DELETE FROM user_flights
+        WHERE timestamp < %s
+    """
+    values = (
+        time.time() - delete_interval,
+    )
+
+    with db.cursor() as cursor:
+        cursor.execute(delete_old_flights_query, values)
+        db.commit()
+        db.close()
+        return True
