@@ -2,10 +2,12 @@
 
 ## Introduction
 
-FlightradarLive is a Telegram bot that uses the [Flightradar24 API](https://www.flightradar24.com/how-it-works) to send
-real-time flight notifications to users based on their location and preferences. Users can set their notification radius
-and altitude range to receive alerts for flights within a specific area. You can add the bot to your Telegram by
-searching for [@flightradarlive_bot](https://t.me/flightradarlive_bot).
+FlightradarLive is a Telegram bot that sends real-time flight notifications based on your location and preferences,
+using data from the [Flightradar24 API](https://www.flightradar24.com/how-it-works). You can set your notification
+radius and altitude range to receive alerts for flights within a specific area, as well as share your live location with
+the bot to receive updates on flights in your vicinity. To use FlightradarLive, simply add the bot to your Telegram
+account by searching for [@flightradarlive_bot](https://t.me/flightradarlive_bot) and start customizing your
+notification settings.
 
 ## Usage
 
@@ -18,22 +20,23 @@ The bot supports the following commands:
 
 - `/info`: Displays the current notification settings for the user.
 
-- `/radius`: This command is used to set the radius for flight notifications. The radius is measured in meters. For
-  example, `/radius 2000` sets the notification radius to 2000 meters. The default radius is 5000 meters.
+- `/radius`: Sets the radius for flight notifications. For example, `/radius 2000` sets the notification radius to 2000
+  m. The default radius is 5000 m.
 
-- `/altitude`: Sets the altitude range for flight notifications. The altitude is measured in
-  meters. The command can be used in two ways:
+- `/altitude`: Sets the altitude range for flight notifications. The command can be used in two ways:
 
-    - `/altitude <altitude>` sets the minimum and maximum altitude to the specified value.
-    - `/altitude <min-altitude> <max-altitude>` sets the minimum and maximum altitude to the specified values.
+    - `/altitude <altitude>`: Sets both the minimum and maximum altitude to the specified value.
+    - `/altitude <min-altitude> <max-altitude>`: Sets the minimum and maximum altitude to the specified values.
 
-  The default minimum altitude is 0 meters and the default maximum altitude is 100000 meters.
+  The default minimum altitude is 0 m and the default maximum altitude is 100000 m.
 
-- `/altmin`: Shortcut for setting the minimum altitude. For example, `/altmin 1000` sets the minimum
-  altitude to 1000 meters.
+- `/altmin`: Sets the minimum altitude. For example, `/altmin 1000` sets the minimum
+  altitude to 1000 m.
 
-- `/altmax`: Shortcut for setting the maximum altitude. For example, `/altmax 10000` sets the maximum
-  altitude to 10000 meters.
+- `/altmax`: Sets the maximum altitude. For example, `/altmax 10000` sets the maximum
+  altitude to 10000 m.
+
+Note: Altitude and radius values are measured in meters.
 
 ## Requirements
 
@@ -99,9 +102,9 @@ Replace the placeholders `YOUR-TELEGRAM-TOKEN`, `YOUR-DB-HOST`, `YOUR-DB-PORT`, 
 and `YOUR-DB-DATABASE` with the appropriate values for your Telegram bot token and MySQL database connection
 information.
 
-## Running the Script
+## Running the Bot
 
-To run the script, execute the following command:
+To run the bot, execute the following command:
 
 ```
 python main.py
