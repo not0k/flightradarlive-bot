@@ -392,12 +392,12 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 if __name__ == '__main__':
     # Starts the thread that checks for flights
-    thread1 = threading.Thread(target=check_flights)
-    thread1.start()
+    flight_checker_thread = threading.Thread(target=check_flights)
+    flight_checker_thread.start()
 
     # Starts the thread that deletes old flights
-    thread2 = threading.Thread(target=delete_old_flights)
-    thread2.start()
+    flight_deleter_thread = threading.Thread(target=delete_old_flights)
+    flight_deleter_thread.start()
 
     # Creates the application
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
