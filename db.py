@@ -81,7 +81,7 @@ def insert_flight(user_id: int, flight_id: str) -> bool:
         return False
 
     insert_flight_query = """
-        INSERT INTO user_flights
+        INSERT INTO flights
         (user_id, flight_id, timestamp)
         VALUES (%s, %s, %s)
     """
@@ -142,7 +142,7 @@ def select_flight(user_id: int, flight_id: str) -> Mapping[str, Any] | None:
         return None
 
     select_flight_query = """
-        SELECT * FROM user_flights
+        SELECT * FROM flights
         WHERE user_id=%s AND flight_id=%s
     """
     values = (
@@ -213,7 +213,7 @@ def delete_old_flights(delete_interval: float) -> bool:
         return False
 
     delete_old_flights_query = """
-        DELETE FROM user_flights
+        DELETE FROM flights
         WHERE timestamp < %s
     """
     values = (
